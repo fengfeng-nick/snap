@@ -109,7 +109,7 @@ export function CameraStage({
           <div className="flex h-[116px] items-center justify-between px-6 sm:h-[142px] sm:px-9">
             <div className="self-start pt-6 sm:pt-8">
               <div className="camera-brand font-display text-[16px] font-semibold sm:text-[18px]">
-                INSTANT LAB
+                SNAP &amp; SEE
               </div>
               <div className="camera-brand-sub mt-1 font-mono text-[9px]">
                 TYPE 600 / LOCAL PROCESS

@@ -173,7 +173,7 @@ export function App() {
     const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15);
     const anchor = document.createElement("a");
     anchor.href = resultUrlRef.current;
-    anchor.download = `instant-lab-${stamp}.${extension}`;
+    anchor.download = `snap-see-${stamp}.${extension}`;
     anchor.click();
   };
 
@@ -212,10 +212,10 @@ export function App() {
       <header className="app-header flex h-[64px] items-center justify-between px-4 sm:h-[72px] sm:px-7">
         <div className="flex min-w-0 items-baseline gap-3 sm:pl-5">
           <h1 className="font-display text-[19px] font-semibold sm:text-[22px]">
-            显影室
+            一拍即显
           </h1>
           <span className="header-sub hidden font-mono text-[9px] sm:inline">
-            INSTANT LAB / 01
+            SNAP &amp; SEE / 01
           </span>
         </div>
       </header>
