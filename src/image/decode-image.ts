@@ -70,7 +70,8 @@ export async function decodePhotoFile(file: File): Promise<PhotoSource> {
 }
 
 export async function loadSamplePhoto(): Promise<PhotoSource> {
-  const response = await fetch("/sample-photo.jpg");
+  // 拼上 BASE_URL，保证部署在子路径（如 GitHub Pages）时也能取到 public 下的资源
+  const response = await fetch(`${import.meta.env.BASE_URL}sample-photo.jpg`);
   if (!response.ok) {
     throw new Error("示例照片加载失败。" );
   }
