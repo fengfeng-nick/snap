@@ -22,6 +22,7 @@ export function App() {
   const inputRef = useRef<HTMLInputElement>(null);
   const sourceRef = useRef<PhotoSource | null>(null);
   const resultUrlRef = useRef<string | null>(null);
+  const resultFormatRef = useRef<ExportFormat>("image/jpeg");
   const sequenceRef = useRef(0);
   const [photo, setPhoto] = useState<PhotoSource | null>(null);
   const [isSample, setIsSample] = useState(true);
@@ -31,13 +32,14 @@ export function App() {
   const [transform, setTransform] = useState<CropTransform>(DEFAULT_TRANSFORM);
   const [captionEnabled, setCaptionEnabled] = useState(true);
   const [captionText, setCaptionText] = useState(DEFAULT_CAPTION);
+  const [captionSize, setCaptionSize] = useState(100);
   const [format, setFormat] = useState<ExportFormat>("image/jpeg");
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const renderOptions = useMemo<RenderOptions>(
-    () => ({ style, intensity, transform, captionEnabled, captionText }),
-    [captionEnabled, captionText, intensity, style, transform],
+    () => ({ style, intensity, transform, captionEnabled, captionText, captionSize }),
+    [captionEnabled, captionSize, captionText, intensity, style, transform],
   );
 
   const clearResult = () => {
@@ -48,9 +50,10 @@ export function App() {
     }
   };
 
-  const returnToEditing = () => {
+  // 显影完成后修改参数时保留旧结果：回到编辑态让用户实时预览新参数，
+  // 旧成片仍可下载，由用户决定何时重新生成
+  const backToEditing = () => {
     sequenceRef.current += 1;
-    clearResult();
     if (photo) setState("editing");
   };
 
@@ -104,6 +107,53 @@ export function App() {
 
   const openPicker = () => inputRef.current?.click();
 
+  // 通过 ref 让全局事件监听始终调用最新的 handlePhotoFile，
+  // 避免闭包捕获挂载时的过期状态
+  const handlePhotoFileRef = useRef(handlePhotoFile);
+  handlePhotoFileRef.current = handlePhotoFile;
+
+  // 拖拽 / 粘贴图片直接导入
+  useEffect(() => {
+    const pickImageFile = (files: Iterable<File>) => {
+      for (const file of files) {
+        if (file.type.startsWith("image/")) return file;
+      }
+      return null;
+    };
+
+    const handleDragOver = (event: DragEvent) => {
+      event.preventDefault();
+    };
+    const handleDrop = (event: DragEvent) => {
+      event.preventDefault();
+      const file = pickImageFile(event.dataTransfer?.files ?? []);
+      if (file) void handlePhotoFileRef.current(file);
+    };
+    const handlePaste = (event: ClipboardEvent) => {
+      const item = Array.from(event.clipboardData?.items ?? []).find((entry) =>
+        entry.type.startsWith("image/"),
+      );
+      const file = item?.getAsFile();
+      if (file) void handlePhotoFileRef.current(file);
+    };
+
+    window.addEventListener("dragover", handleDragOver);
+    window.addEventListener("drop", handleDrop);
+    window.addEventListener("paste", handlePaste);
+    return () => {
+      window.removeEventListener("dragover", handleDragOver);
+      window.removeEventListener("drop", handleDrop);
+      window.removeEventListener("paste", handlePaste);
+    };
+  }, []);
+
+  // 错误提示 5 秒后自动消失
+  useEffect(() => {
+    if (!error) return;
+    const timer = window.setTimeout(() => setError(null), 5000);
+    return () => window.clearTimeout(timer);
+  }, [error]);
+
   const startRevealSequence = async (runId: number, retractFirst = false) => {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reducedMotion) {
@@ -143,6 +193,7 @@ export function App() {
       ]);
       if (sequenceRef.current !== runId) return;
       setResultBlob(blob);
+      resultFormatRef.current = format;
       const url = URL.createObjectURL(blob);
       resultUrlRef.current = url;
       await startRevealSequence(runId);
@@ -169,7 +220,7 @@ export function App() {
 
   const handleDownload = () => {
     if (!resultBlob || !resultUrlRef.current) return;
-    const extension = format === "image/png" ? "png" : "jpg";
+    const extension = resultFormatRef.current === "image/png" ? "png" : "jpg";
     const stamp = new Date().toISOString().replace(/[-:]/g, "").slice(0, 15);
     const anchor = document.createElement("a");
     anchor.href = resultUrlRef.current;
@@ -178,32 +229,37 @@ export function App() {
   };
 
   const updateStyle = (nextStyle: PhotoStyle) => {
-    returnToEditing();
+    backToEditing();
     setStyle(nextStyle);
   };
 
   const updateIntensity = (value: number) => {
-    returnToEditing();
+    backToEditing();
     setIntensity(value);
   };
 
   const updateTransform = (value: CropTransform) => {
-    returnToEditing();
+    backToEditing();
     setTransform(value);
   };
 
   const updateCaptionEnabled = (value: boolean) => {
-    returnToEditing();
+    backToEditing();
     setCaptionEnabled(value);
   };
 
   const updateCaptionText = (value: string) => {
-    returnToEditing();
+    backToEditing();
     setCaptionText(value);
   };
 
+  const updateCaptionSize = (value: number) => {
+    backToEditing();
+    setCaptionSize(value);
+  };
+
   const updateFormat = (value: ExportFormat) => {
-    returnToEditing();
+    backToEditing();
     setFormat(value);
   };
 
@@ -236,15 +292,18 @@ export function App() {
           transform={transform}
           captionEnabled={captionEnabled}
           captionText={captionText}
+          captionSize={captionSize}
           format={format}
           state={state}
           hasPhoto={Boolean(photo)}
+          hasResult={Boolean(resultBlob)}
           onPickPhoto={openPicker}
           onStyleChange={updateStyle}
           onIntensityChange={updateIntensity}
           onTransformChange={updateTransform}
           onCaptionEnabledChange={updateCaptionEnabled}
           onCaptionTextChange={updateCaptionText}
+          onCaptionSizeChange={updateCaptionSize}
           onFormatChange={updateFormat}
           onGenerate={handleGenerate}
           onSkip={handleSkip}

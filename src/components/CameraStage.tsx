@@ -34,6 +34,10 @@ function clamp(value: number) {
   return Math.min(1, Math.max(-1, value));
 }
 
+const PREVIEW_FAST_WIDTH = 360;
+const PREVIEW_FULL_WIDTH = 720;
+const FULL_RENDER_DELAY = 160;
+
 export function CameraStage({
   photo,
   options,
@@ -42,6 +46,11 @@ export function CameraStage({
   onPickPhoto,
 }: CameraStageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const rafRef = useRef(0);
+  const fullTimerRef = useRef(0);
+  const latestRef = useRef({ photo, options, onPanChange });
+  latestRef.current = { photo, options, onPanChange };
   const dragRef = useRef<{
     pointerId: number;
     x: number;
@@ -51,10 +60,56 @@ export function CameraStage({
   } | null>(null);
   const editable = state === "editing" || state === "complete";
 
+  // 交互期间先用低分辨率快速渲染，停顿后再补一版全分辨率，
+  // 避免拖滑杆/平移/敲题字时每帧都做全量像素处理
   useEffect(() => {
-    if (!photo || !canvasRef.current) return;
-    renderPolaroid(canvasRef.current, photo, options, 720);
+    if (!photo) return;
+
+    const renderPreview = (width: number) => {
+      const latest = latestRef.current;
+      if (!latest.photo || !canvasRef.current) return;
+      renderPolaroid(canvasRef.current, latest.photo, latest.options, width);
+    };
+
+    cancelAnimationFrame(rafRef.current);
+    rafRef.current = requestAnimationFrame(() =>
+      renderPreview(PREVIEW_FAST_WIDTH),
+    );
+    window.clearTimeout(fullTimerRef.current);
+    fullTimerRef.current = window.setTimeout(
+      () => renderPreview(PREVIEW_FULL_WIDTH),
+      FULL_RENDER_DELAY,
+    );
+
+    return () => {
+      cancelAnimationFrame(rafRef.current);
+      window.clearTimeout(fullTimerRef.current);
+    };
   }, [options, photo]);
+
+  // 滚轮缩放：React 根节点的 wheel 监听是 passive 的，无法 preventDefault，
+  // 这里用原生非 passive 监听，避免缩放时页面跟着滚动
+  useEffect(() => {
+    const element = trackRef.current;
+    if (!element || !editable) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      const latest = latestRef.current;
+      if (!latest.photo) return;
+      event.preventDefault();
+      const transform = latest.options.transform;
+      const zoom = Math.min(
+        2.5,
+        Math.max(1, transform.zoom - event.deltaY * 0.0015),
+      );
+      if (zoom !== transform.zoom) {
+        latest.onPanChange({ ...transform, zoom });
+      }
+    };
+
+    element.addEventListener("wheel", handleWheel, { passive: false });
+    return () => element.removeEventListener("wheel", handleWheel);
+  }, [editable]);
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (!editable || !photo) return;
@@ -133,6 +188,7 @@ export function CameraStage({
 
         <div className="photo-viewport">
           <div
+            ref={trackRef}
             className="photo-track"
             onPointerDown={handlePointerDown}
             onPointerMove={handlePointerMove}

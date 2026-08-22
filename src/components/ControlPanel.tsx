@@ -21,15 +21,18 @@ type ControlPanelProps = {
   transform: CropTransform;
   captionEnabled: boolean;
   captionText: string;
+  captionSize: number;
   format: ExportFormat;
   state: MachineState;
   hasPhoto: boolean;
+  hasResult: boolean;
   onPickPhoto: () => void;
   onStyleChange: (style: PhotoStyle) => void;
   onIntensityChange: (value: number) => void;
   onTransformChange: (transform: CropTransform) => void;
   onCaptionEnabledChange: (enabled: boolean) => void;
   onCaptionTextChange: (value: string) => void;
+  onCaptionSizeChange: (value: number) => void;
   onFormatChange: (format: ExportFormat) => void;
   onGenerate: () => void;
   onSkip: () => void;
@@ -56,15 +59,18 @@ export function ControlPanel({
   transform,
   captionEnabled,
   captionText,
+  captionSize,
   format,
   state,
   hasPhoto,
+  hasResult,
   onPickPhoto,
   onStyleChange,
   onIntensityChange,
   onTransformChange,
   onCaptionEnabledChange,
   onCaptionTextChange,
+  onCaptionSizeChange,
   onFormatChange,
   onGenerate,
   onSkip,
@@ -204,16 +210,39 @@ export function ControlPanel({
             </button>
           </div>
           {captionEnabled && (
-            <input
-              className="caption-control mt-3"
-              type="text"
-              maxLength={30}
-              placeholder="写点什么…"
-              value={captionText}
-              onChange={(event) => onCaptionTextChange(event.target.value)}
-              disabled={controlsDisabled}
-              aria-label="照片题字"
-            />
+            <>
+              <input
+                className="caption-control mt-3"
+                type="text"
+                maxLength={30}
+                placeholder="写点什么…"
+                value={captionText}
+                onChange={(event) => onCaptionTextChange(event.target.value)}
+                disabled={controlsDisabled}
+                aria-label="照片题字"
+              />
+              <div className="mt-4 mb-2 flex items-center justify-between">
+                <label htmlFor="caption-size" className="control-label">
+                  题字大小
+                </label>
+                <output className="control-value" htmlFor="caption-size">
+                  {captionSize}%
+                </output>
+              </div>
+              <input
+                id="caption-size"
+                className="range-control"
+                type="range"
+                min="50"
+                max="250"
+                step="5"
+                value={captionSize}
+                onChange={(event) =>
+                  onCaptionSizeChange(Number(event.target.value))
+                }
+                disabled={controlsDisabled}
+              />
+            </>
           )}
         </section>
 
@@ -267,6 +296,27 @@ export function ControlPanel({
             <SkipForward className="h-[18px] w-[18px]" aria-hidden="true" />
             跳过显影
           </button>
+        ) : hasResult ? (
+          <div className="grid grid-cols-[1fr_auto] gap-2">
+            <button
+              type="button"
+              className="primary-button"
+              onClick={onGenerate}
+              disabled={!hasPhoto || state === "loading"}
+            >
+              <Camera className="h-[18px] w-[18px]" aria-hidden="true" />
+              重新生成
+            </button>
+            <button
+              type="button"
+              className="secondary-button aspect-square px-0"
+              title="下载上一张"
+              aria-label="下载上一张"
+              onClick={onDownload}
+            >
+              <Download className="h-[18px] w-[18px]" aria-hidden="true" />
+            </button>
+          </div>
         ) : (
           <button
             type="button"

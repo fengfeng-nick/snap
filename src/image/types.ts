@@ -22,5 +22,7 @@ export type RenderOptions = {
   transform: CropTransform;
   captionEnabled: boolean;
   captionText: string;
+  /** 题字大小百分比，100 为默认大小 */
+  captionSize: number;
 };
 

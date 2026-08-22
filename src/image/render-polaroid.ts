@@ -264,7 +264,8 @@ export function renderPolaroid(
 
   const caption = options.captionEnabled ? options.captionText.trim() : "";
   if (caption) {
-    const baseSize = Math.round(width * 0.022);
+    const sizeScale = Math.min(2.5, Math.max(0.5, options.captionSize / 100));
+    const baseSize = Math.round(width * 0.022 * sizeScale);
     const maxWidth = width - border * 2;
     context.save();
     context.fillStyle = "rgba(146, 62, 46, 0.76)";
