@@ -5,7 +5,7 @@ import type {
   RenderOptions,
 } from "./types";
 
-export const PAPER_ASPECT = 0.82;
+export const PAPER_ASPECT = 0.87;
 
 type StyleRecipe = {
   saturation: number;
@@ -40,6 +40,14 @@ const STYLE_RECIPES: Record<PhotoStyle, StyleRecipe> = {
     green: 3,
     lift: 7,
     grain: 6.2,
+  },
+  aged: {
+    saturation: 0.62,
+    contrast: 0.9,
+    warmth: 16,
+    green: -4,
+    lift: 26,
+    grain: 8.8,
   },
 };
 
@@ -110,8 +118,19 @@ function applyFilm(
     r += warmth * (0.35 + highlight * 0.65) + highlight * 3.5 * mix;
     g += recipe.green * mix + highlight * 1.2 * mix;
     b -= warmth * 0.7;
-    b += shadow * (style === "night" ? 7 : 3) * mix;
+    b += shadow * (style === "night" ? 7 : style === "aged" ? -2 : 3) * mix;
     g += shadow * (style === "night" ? 2.5 : 1) * mix;
+
+    if (style === "aged") {
+      // 混入褐色银盐色调，模拟老照片氧化发黄
+      const sepiaMix = 0.55 * mix;
+      const sepiaR = r * 0.393 + g * 0.769 + b * 0.189;
+      const sepiaG = r * 0.349 + g * 0.686 + b * 0.168;
+      const sepiaB = r * 0.272 + g * 0.534 + b * 0.131;
+      r += (sepiaR - r) * sepiaMix;
+      g += (sepiaG - g) * sepiaMix;
+      b += (sepiaB - b) * sepiaMix;
+    }
 
     const dx = (x / width - 0.5) * 2;
     const dy = (y / height - 0.5) * 2;
@@ -131,6 +150,7 @@ function addPaperTexture(
   context: CanvasRenderingContext2D,
   width: number,
   height: number,
+  aged = false,
 ) {
   const imageData = context.getImageData(0, 0, width, height);
   const data = imageData.data;
@@ -138,20 +158,48 @@ function addPaperTexture(
   for (let index = 0; index < data.length; index += 4) {
     const pixel = index / 4;
     const noiseSeed = (pixel * 22695477 + 1) >>> 0;
-    const noise = ((noiseSeed >>> 25) / 127 - 0.5) * 2.2;
+    const noise = ((noiseSeed >>> 25) / 127 - 0.5) * (aged ? 4.6 : 2.2);
     data[index] = clamp(data[index] + noise);
     data[index + 1] = clamp(data[index + 1] + noise);
     data[index + 2] = clamp(data[index + 2] + noise * 0.8);
+
+    if (aged) {
+      const x = pixel % width;
+      const y = Math.floor(pixel / width);
+
+      // 低频色斑，模拟纸张受潮氧化的污渍
+      const blotch =
+        Math.sin(x * 0.011 + 1.7) * Math.sin(y * 0.015 + 0.4) +
+        Math.sin((x * 0.7 + y * 1.3) * 0.006 + 2.8) * 0.8 +
+        Math.sin((x * 1.9 - y * 0.6) * 0.004 + 5.1) * 0.5;
+      const stain = Math.max(0, blotch - 0.75) * 9;
+
+      // 边缘与四角氧化变深
+      const dx = (x / width - 0.5) * 2;
+      const dy = (y / height - 0.5) * 2;
+      const edge = Math.max(0, Math.sqrt(dx * dx + dy * dy) - 0.58) ** 1.7 * 26;
+
+      // 整体轻微泛黄，斑块处偏黄褐
+      const wear = stain + edge;
+      data[index] = clamp(data[index] + 4 - wear * 0.45);
+      data[index + 1] = clamp(data[index + 1] + 1 - wear * 0.75);
+      data[index + 2] = clamp(data[index + 2] - 6 - wear * 1.15);
+    }
   }
 
   context.putImageData(imageData, 0, 0);
 }
 
-function formatDate(value: string) {
-  if (!value) return "";
-  const [year, month, day] = value.split("-");
-  return `${year}.${month}.${day}`;
+function formatTodayStamp() {
+  const date = new Date();
+  const localTime = new Date(
+    date.getTime() - date.getTimezoneOffset() * 60_000,
+  );
+  return localTime.toISOString().slice(0, 10).replace(/-/g, ".");
 }
+
+// 默认题字仍用当天日期，保持与旧日期和一致的手写感
+export const DEFAULT_CAPTION = formatTodayStamp();
 
 export function renderPolaroid(
   canvas: HTMLCanvasElement,
@@ -161,7 +209,7 @@ export function renderPolaroid(
 ) {
   const width = Math.round(paperWidth);
   const height = Math.round(width / PAPER_ASPECT);
-  const border = Math.round(width * 0.065);
+  const border = Math.round(width * 0.055);
   const apertureSize = width - border * 2;
   const context = canvas.getContext("2d", { willReadFrequently: true });
 
@@ -169,10 +217,12 @@ export function renderPolaroid(
     throw new Error("当前浏览器无法创建图片画布。" );
   }
 
+  const aged = options.style === "aged";
+
   canvas.width = width;
   canvas.height = height;
   context.clearRect(0, 0, width, height);
-  context.fillStyle = "#f1f0e9";
+  context.fillStyle = aged ? "#e4d6b2" : "#f1f0e9";
   context.fillRect(0, 0, width, height);
 
   const crop = calculateSquareCrop(photo.width, photo.height, options.transform);
@@ -203,7 +253,7 @@ export function renderPolaroid(
   );
   context.putImageData(photoData, border, border);
 
-  context.strokeStyle = "rgba(26, 31, 30, 0.12)";
+  context.strokeStyle = aged ? "rgba(94, 70, 42, 0.22)" : "rgba(26, 31, 30, 0.12)";
   context.lineWidth = Math.max(1, width / 900);
   context.strokeRect(
     border - context.lineWidth / 2,
@@ -212,18 +262,29 @@ export function renderPolaroid(
     apertureSize + context.lineWidth,
   );
 
-  if (options.dateEnabled && options.dateValue) {
-    const date = formatDate(options.dateValue);
+  const caption = options.captionEnabled ? options.captionText.trim() : "";
+  if (caption) {
+    const baseSize = Math.round(width * 0.022);
+    const maxWidth = width - border * 2;
     context.save();
     context.fillStyle = "rgba(146, 62, 46, 0.76)";
-    context.font = `${Math.round(width * 0.022)}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    context.font = `${baseSize}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    const measured = context.measureText(caption).width;
+    if (measured > maxWidth) {
+      // 长题字按比例缩小字号，避免溢出相纸
+      const fitted = Math.max(
+        Math.round(width * 0.014),
+        Math.floor((baseSize * maxWidth) / measured),
+      );
+      context.font = `${fitted}px ui-monospace, SFMono-Regular, Menlo, monospace`;
+    }
     context.textAlign = "right";
     context.textBaseline = "middle";
-    context.fillText(date, width - border, height - border * 1.25);
+    context.fillText(caption, width - border, height - border * 1.25);
     context.restore();
   }
 
-  addPaperTexture(context, width, height);
+  addPaperTexture(context, width, height, aged);
 }
 
 export function renderPolaroidBlob(

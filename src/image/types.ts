@@ -1,4 +1,4 @@
-export type PhotoStyle = "classic" | "warm" | "night";
+export type PhotoStyle = "classic" | "warm" | "night" | "aged";
 
 export type ExportFormat = "image/jpeg" | "image/png";
 
@@ -20,7 +20,7 @@ export type RenderOptions = {
   style: PhotoStyle;
   intensity: number;
   transform: CropTransform;
-  dateEnabled: boolean;
-  dateValue: string;
+  captionEnabled: boolean;
+  captionText: string;
 };
 

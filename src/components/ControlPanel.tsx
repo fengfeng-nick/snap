@@ -19,8 +19,8 @@ type ControlPanelProps = {
   style: PhotoStyle;
   intensity: number;
   transform: CropTransform;
-  dateEnabled: boolean;
-  dateValue: string;
+  captionEnabled: boolean;
+  captionText: string;
   format: ExportFormat;
   state: MachineState;
   hasPhoto: boolean;
@@ -28,8 +28,8 @@ type ControlPanelProps = {
   onStyleChange: (style: PhotoStyle) => void;
   onIntensityChange: (value: number) => void;
   onTransformChange: (transform: CropTransform) => void;
-  onDateEnabledChange: (enabled: boolean) => void;
-  onDateValueChange: (value: string) => void;
+  onCaptionEnabledChange: (enabled: boolean) => void;
+  onCaptionTextChange: (value: string) => void;
   onFormatChange: (format: ExportFormat) => void;
   onGenerate: () => void;
   onSkip: () => void;
@@ -45,6 +45,7 @@ const STYLE_OPTIONS: Array<{
   { id: "classic", label: "经典", swatch: "bg-[#9b756a]" },
   { id: "warm", label: "暖日", swatch: "bg-[#cf8b50]" },
   { id: "night", label: "冷夜", swatch: "bg-[#577d83]" },
+  { id: "aged", label: "作旧", swatch: "bg-[#b3925c]" },
 ];
 
 export function ControlPanel({
@@ -53,8 +54,8 @@ export function ControlPanel({
   style,
   intensity,
   transform,
-  dateEnabled,
-  dateValue,
+  captionEnabled,
+  captionText,
   format,
   state,
   hasPhoto,
@@ -62,8 +63,8 @@ export function ControlPanel({
   onStyleChange,
   onIntensityChange,
   onTransformChange,
-  onDateEnabledChange,
-  onDateValueChange,
+  onCaptionEnabledChange,
+  onCaptionTextChange,
   onFormatChange,
   onGenerate,
   onSkip,
@@ -105,9 +106,9 @@ export function ControlPanel({
         <section className="control-section">
           <div className="mb-3 flex items-center justify-between">
             <label className="control-label">显影配方</label>
-            <span className="control-value">03</span>
+            <span className="control-value">04</span>
           </div>
-          <div className="segmented-control grid grid-cols-3">
+          <div className="segmented-control grid grid-cols-4">
             {STYLE_OPTIONS.map((option) => (
               <button
                 key={option.id}
@@ -187,29 +188,31 @@ export function ControlPanel({
 
         <section className="control-section">
           <div className="flex items-center justify-between gap-4">
-            <label htmlFor="date-toggle" className="control-label">
-              日期戳
+            <label htmlFor="caption-toggle" className="control-label">
+              照片题字
             </label>
             <button
-              id="date-toggle"
+              id="caption-toggle"
               type="button"
               role="switch"
-              aria-checked={dateEnabled}
-              className={`toggle-control ${dateEnabled ? "is-on" : ""}`}
-              onClick={() => onDateEnabledChange(!dateEnabled)}
+              aria-checked={captionEnabled}
+              className={`toggle-control ${captionEnabled ? "is-on" : ""}`}
+              onClick={() => onCaptionEnabledChange(!captionEnabled)}
               disabled={controlsDisabled}
             >
               <span></span>
             </button>
           </div>
-          {dateEnabled && (
+          {captionEnabled && (
             <input
-              className="date-control mt-3"
-              type="date"
-              value={dateValue}
-              onChange={(event) => onDateValueChange(event.target.value)}
+              className="caption-control mt-3"
+              type="text"
+              maxLength={30}
+              placeholder="写点什么…"
+              value={captionText}
+              onChange={(event) => onCaptionTextChange(event.target.value)}
               disabled={controlsDisabled}
-              aria-label="照片日期"
+              aria-label="照片题字"
             />
           )}
         </section>

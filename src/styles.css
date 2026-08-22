@@ -123,19 +123,6 @@ input:focus-visible,
   letter-spacing: 0.14em;
 }
 
-/* 隐私提示：铆在金属梁上的小铭牌 */
-.privacy-badge {
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 4px;
-  background: linear-gradient(#4d5357, #34393d);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
-    0 1px 2px rgba(0, 0, 0, 0.35);
-  color: #cfcaba;
-  letter-spacing: 0.08em;
-}
-
 .camera-stage {
   isolation: isolate;
   background-image:
@@ -333,7 +320,7 @@ input:focus-visible,
 .photo-print {
   position: relative;
   width: 100%;
-  aspect-ratio: 0.82;
+  aspect-ratio: 0.87;
   overflow: hidden;
   background-color: var(--color-paper);
   box-shadow:
@@ -370,7 +357,7 @@ input:focus-visible,
 .photo-empty {
   display: grid;
   width: 100%;
-  aspect-ratio: 0.82;
+  aspect-ratio: 0.87;
   place-items: center;
   align-content: center;
   gap: 10px;
@@ -1015,8 +1002,8 @@ input:focus-visible,
   transform: translateX(22px);
 }
 
-/* 日期窗：内凹的米白读数框 */
-.date-control {
+/* 题字窗：内凹的米白手写框 */
+.caption-control {
   width: 100%;
   height: 44px;
   border: 1px solid rgba(43, 42, 36, 0.24);
@@ -1031,6 +1018,10 @@ input:focus-visible,
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.08em;
+}
+
+.caption-control::placeholder {
+  color: rgba(43, 42, 36, 0.38);
 }
 
 .primary-button,

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { LockKeyhole, X } from "lucide-react";
+import { X } from "lucide-react";
 import { CameraStage, type MachineState } from "./components/CameraStage";
 import { ControlPanel } from "./components/ControlPanel";
 import { decodePhotoFile, loadSamplePhoto } from "./image/decode-image";
-import { renderPolaroidBlob } from "./image/render-polaroid";
+import { renderPolaroidBlob, DEFAULT_CAPTION } from "./image/render-polaroid";
 import type {
   CropTransform,
   ExportFormat,
@@ -11,12 +11,6 @@ import type {
   PhotoStyle,
   RenderOptions,
 } from "./image/types";
-
-function today() {
-  const date = new Date();
-  const localTime = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
-  return localTime.toISOString().slice(0, 10);
-}
 
 function delay(duration: number) {
   return new Promise((resolve) => window.setTimeout(resolve, duration));
@@ -35,15 +29,15 @@ export function App() {
   const [style, setStyle] = useState<PhotoStyle>("classic");
   const [intensity, setIntensity] = useState(72);
   const [transform, setTransform] = useState<CropTransform>(DEFAULT_TRANSFORM);
-  const [dateEnabled, setDateEnabled] = useState(true);
-  const [dateValue, setDateValue] = useState(today);
+  const [captionEnabled, setCaptionEnabled] = useState(true);
+  const [captionText, setCaptionText] = useState(DEFAULT_CAPTION);
   const [format, setFormat] = useState<ExportFormat>("image/jpeg");
   const [resultBlob, setResultBlob] = useState<Blob | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const renderOptions = useMemo<RenderOptions>(
-    () => ({ style, intensity, transform, dateEnabled, dateValue }),
-    [dateEnabled, dateValue, intensity, style, transform],
+    () => ({ style, intensity, transform, captionEnabled, captionText }),
+    [captionEnabled, captionText, intensity, style, transform],
   );
 
   const clearResult = () => {
@@ -198,14 +192,14 @@ export function App() {
     setTransform(value);
   };
 
-  const updateDateEnabled = (value: boolean) => {
+  const updateCaptionEnabled = (value: boolean) => {
     returnToEditing();
-    setDateEnabled(value);
+    setCaptionEnabled(value);
   };
 
-  const updateDateValue = (value: string) => {
+  const updateCaptionText = (value: string) => {
     returnToEditing();
-    setDateValue(value);
+    setCaptionText(value);
   };
 
   const updateFormat = (value: ExportFormat) => {
@@ -224,10 +218,6 @@ export function App() {
             INSTANT LAB / 01
           </span>
         </div>
-        <div className="privacy-badge flex items-center gap-2 px-2.5 py-1.5 font-mono text-[9px] sm:px-3">
-          <LockKeyhole className="h-3.5 w-3.5 text-sun" aria-hidden="true" />
-          仅在本机处理
-        </div>
       </header>
 
       <main className="lg:grid lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -244,8 +234,8 @@ export function App() {
           style={style}
           intensity={intensity}
           transform={transform}
-          dateEnabled={dateEnabled}
-          dateValue={dateValue}
+          captionEnabled={captionEnabled}
+          captionText={captionText}
           format={format}
           state={state}
           hasPhoto={Boolean(photo)}
@@ -253,8 +243,8 @@ export function App() {
           onStyleChange={updateStyle}
           onIntensityChange={updateIntensity}
           onTransformChange={updateTransform}
-          onDateEnabledChange={updateDateEnabled}
-          onDateValueChange={updateDateValue}
+          onCaptionEnabledChange={updateCaptionEnabled}
+          onCaptionTextChange={updateCaptionText}
           onFormatChange={updateFormat}
           onGenerate={handleGenerate}
           onSkip={handleSkip}
